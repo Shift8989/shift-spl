@@ -1,0 +1,169 @@
+{
+ "configured": true,
+ "config": "FfCm3UAqCGhfjPj9Y2qScp45eo5WfcyS794hVWxF8HUz",
+ "quoteMint": "So11111111111111111111111111111111111111112",
+ "quoteDecimals": 9,
+ "baseDecimals": 6,
+ "thresholdSol": 104.132267658,
+ "creatorTradingFeePercentage": 0,
+ "mutable": true,
+ "solQuoted": true,
+ "solUsd": 102.94243366418917,
+ "keeperIntervalMin": 30,
+ "voteRoundMin": 60,
+ "pairs": [
+  {
+   "quoteMint": "So11111111111111111111111111111111111111112",
+   "symbol": "SOL",
+   "name": "Solana",
+   "decimals": 9,
+   "image": null,
+   "kind": "sol",
+   "config": "FfCm3UAqCGhfjPj9Y2qScp45eo5WfcyS794hVWxF8HUz"
+  },
+  {
+   "quoteMint": "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
+   "symbol": "AAPLx",
+   "name": "Apple xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/AAPLx.png",
+   "config": "HmqLAYSc8F5SbwuUTuZJHHPrWnGpLViKH5jttFCrYohN",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg",
+   "symbol": "AMZNx",
+   "name": "Amazon.com xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/AMZNx.png",
+   "config": "7wzsQF3WK4FuPu3vevf28kj7Vf8fWp3Q6B1gnrRidrvq",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu",
+   "symbol": "COINx",
+   "name": "Coinbase xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/COINx.png",
+   "config": "2h8DA9SJnpjkG9ydeFBc14oxdweMgYrFJxca3mihSM6K",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "XsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1",
+   "symbol": "CRCLx",
+   "name": "Circle xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/CRCLx.png",
+   "config": "12vmYLs5ADLA6rN6LvYPkpmsdcwAEcF6TWuASKJwhurS",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",
+   "symbol": "GLDx",
+   "name": "Gold xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/GLDx.png",
+   "config": "ANXVU7jwdRRYTdZC6RA2s3qgDRSdnFcH8U9gHqarMNfe",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "Xsf9mBktVB9BSU5kf4nHxPq5hCBJ2j2ui3ecFGxPRGc",
+   "symbol": "GMEx",
+   "name": "Gamestop xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/GMEx.png",
+   "config": "D3x3rb2QNurLcZatReFirU8wXuV1SvopM9sxKWCRwRPz",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
+   "symbol": "GOOGLx",
+   "name": "Alphabet xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/GOOGLx.png",
+   "config": "EXPnKp16dmmUTYzFsQ4TKYxDU13ueabm9kRGAq5z7Rkj",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg",
+   "symbol": "HOODx",
+   "name": "Robinhood xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/HOODx.png",
+   "config": "5FXmAkee82g4qUcPuCRv3wYUDfa73pXMgkZWTDq9gkjf",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu",
+   "symbol": "METAx",
+   "name": "Meta xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/METAx.png",
+   "config": "EExMwQvpgAALn7CzrSy2pEDFhNYXEuGxUbaz8Gxni68D",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX",
+   "symbol": "MSFTx",
+   "name": "Microsoft xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/MSFTx.png",
+   "config": "76D26TSfFYyr1QXCsYRKg8fR8udS9zjGTUmxn9SArFC3",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
+   "symbol": "MSTRx",
+   "name": "MicroStrategy xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/MSTRx.png",
+   "config": "4TG2gEGACmfY8kGSfUHr7KJM7YLUXdg5xvy26xphuCb3",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+   "symbol": "NVDAx",
+   "name": "NVIDIA xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/NVDAx.png",
+   "config": "BbPB3aiMevxhffXdEi1s3JdwAVJKBcVpWN49TZ1DucDd",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ",
+   "symbol": "QQQx",
+   "name": "Nasdaq xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/QQQx.png",
+   "config": "5e7Ta7h5KcUe5nhkTcwyztkiVA3EZEZt2kECjysveDdm",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+   "symbol": "SPYx",
+   "name": "SP500 xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/SPYx.png",
+   "config": "2PiMUz8mwZhJqJqAvtXvvJWUWPgtZXF1gQ3nETG9253g",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+   "symbol": "TSLAx",
+   "name": "Tesla xStock",
+   "decimals": 8,
+   "image": "https://xstocks-metadata.backed.fi/logos/tokens/TSLAx.png",
+   "config": "6RGWbVvKz9jM4RJdiF9pFLiTVbCnet8xbPmWCk32UR3f",
+   "kind": "stock"
+  },
+  {
+   "quoteMint": "TTWofwAge91oFhZs7kpQdyrVRkmevgM88xijGvQFbKo",
+   "symbol": "TTWO",
+   "name": "Take-Two Interactive",
+   "decimals": 6,
+   "image": "https://backpack.exchange/api/stock-logo/TTWO",
+   "config": "AbcMzHUinBbqLea9WhnoF7NehP43nUeNNUXbq6NnJgsd",
+   "kind": "stock"
+  }
+ ]
+}

@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# shift · shiftable spl
 
-## Getting Started
+Launchpad for **STS-1** (Shiftable Token Standard) tokens on Solana: SPL tokens whose on-chain name, ticker and image can be rewritten after launch, by the creator, on a schedule, by holder vote, or by following what is trending. Same mint, same balances, new identity in every wallet.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router, Turbopack) · React 19 · TypeScript
+- Tailwind CSS v4 (`@theme` tokens in `app/globals.css`)
+- Fonts: Geist, Geist Mono, Unbounded (brand) via `next/font`
+- `@solana/wallet-adapter` (Phantom, Solflare) · `@solana/web3.js`
+- `lightweight-charts` for the token chart
+
+## Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `NEXT_PUBLIC_RPC_URL` in `.env.local` to use your own Solana RPC.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/` pages: `/` home, `/explore` tokens, `/shifts` engine log, `/lab` launch, `/docs` STS-1 spec, `/specimen/[mint]` token page
+- `app/api/` JSON API: `specimens`, `specimens/[mint]`, `shifts`, `trending`, `config`, `launch` (stub)
+- `components/` UI (shell, cards, hero diagram, launch form, token view, chart, wallet)
+- `data/` seed data served by the API until the indexer / keeper backend is connected
