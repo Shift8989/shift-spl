@@ -16,7 +16,7 @@ export default function Docs() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="chip">STS-1</span>
             <span className="chip">status · live on mainnet</span>
-            <span className="chip">revision 2026-10-20</span>
+            <span className="chip">revision 2026-10-24</span>
           </div>
           <h1 className="mt-5 text-[34px] leading-[1.05] font-semibold tracking-[-0.045em] sm:text-[46px]">The Shiftable Token Standard</h1>
           <p className="mt-4 max-w-2xl text-[15.5px] leading-relaxed text-ink-soft">

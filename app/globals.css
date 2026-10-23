@@ -19,7 +19,7 @@
   --animate-rise: rise 0.26s ease-out both;
   --animate-marquee: marquee 60s linear infinite;
   --animate-blink: blink 1s step-end infinite;
-  --animate-mutate: mutate 0.9s cubic-bezier(0.3, 0, 0.2, 1) both;
+  --animate-morph: morph 0.9s cubic-bezier(0.3, 0, 0.2, 1) both;
   --animate-scan: scan 0.9s linear both;
   --animate-travel: travel 1.6s linear infinite;
 
@@ -27,7 +27,7 @@
   @keyframes marquee { 0% { transform: translate(0); } to { transform: translate(-50%); } }
   @keyframes travel { 0% { opacity: 0; left: 0%; } 10% { opacity: 1; } 90% { opacity: 1; } to { opacity: 0; left: 100%; } }
   @keyframes blink { 50% { opacity: 0; } }
-  @keyframes mutate {
+  @keyframes morph {
     0% { filter: none; clip-path: inset(0); transform: none; }
     15% { filter: grayscale() contrast(3) brightness(1.4); clip-path: inset(10% 0 55%); transform: scale(1.04) translate(-3px); }
     30% { filter: invert() contrast(2); clip-path: inset(48% 0 12%); transform: translate(4px); }
@@ -84,5 +84,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-rise, .animate-marquee, .animate-blink, .animate-mutate, .animate-scan, .animate-travel { animation: none; }
+  .animate-rise, .animate-marquee, .animate-blink, .animate-morph, .animate-scan, .animate-travel { animation: none; }
 }

@@ -15,7 +15,7 @@ export function statusLine(s: Specimen, now: number) {
     case "scheduled":
       return s.next ? `Next identity in ${countdown(new Date(s.next).getTime() - now)}` : "Schedule complete";
     default:
-      return s.last_mutation_at ? `Creator shifted ${timeAgo(s.last_mutation_at, now)}` : "Shifts when the creator decides";
+      return s.last_shift_at ? `Creator shifted ${timeAgo(s.last_shift_at, now)}` : "Shifts when the creator decides";
   }
 }
 

@@ -139,12 +139,12 @@ export function HeroDiagram({ trending }: { trending: Trending[] }) {
         <div className="absolute flex flex-col items-center" style={{ left: 300, top: 22, width: 170 }}>
           <div className="relative shrink-0 overflow-hidden rounded-xl" style={{ width: 150, height: 150 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img key={image} alt={symbol} className={`animate-mutate shrink-0 rounded-xl bg-bg-2 object-cover`} src={image} style={{ width: 150, height: 150 }} />
+            <img key={image} alt={symbol} className={`animate-morph shrink-0 rounded-xl bg-bg-2 object-cover`} src={image} style={{ width: 150, height: 150 }} />
           </div>
           <div className="mono mt-3 w-full truncate text-center text-[12px] text-ink">
             {name} <span className="text-ink-soft">${symbol}</span>
           </div>
-          <div className="mono text-[10.5px] text-ink-faint">SPL mint {mintShort("7xKpQ2mN4vR8sT1uW3yZ5aB6cD9eF0gH2jK4mN6pQ3FqA")}</div>
+          <div className="mono text-[10.5px] text-ink-faint">SPL mint {mintShort("ShFt4kQ9vN2mX7rT1wB5yL8cH3jP6dG0zA2eK4uM9sV1")}</div>
         </div>
 
         <Box style={boxStyle("authority", 540, 20)} tag="authority" title="signs" sub="launchpad holds update authority" k={cycle} />

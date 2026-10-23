@@ -31,7 +31,7 @@ export type Specimen = {
   first_buy_lamports: number;
   status: string;
   signature: string;
-  last_mutation_at: string | null;
+  last_shift_at: string | null;
   dormant_reason: string | null;
   created_at: string;
   mode: Mode;

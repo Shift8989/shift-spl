@@ -209,7 +209,7 @@ export function LaunchForm({ config }: { config: Config }) {
                   </div>
                   <Wire label="rewrite" />
                   <div className="flex w-[112px] shrink-0 flex-col items-center text-center">
-                    <div className="animate-mutate size-11 overflow-hidden rounded-lg border border-line-strong bg-card-2">
+                    <div className="animate-morph size-11 overflow-hidden rounded-lg border border-line-strong bg-card-2">
                       {image && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img alt="" src={image} className="size-full object-cover" />
