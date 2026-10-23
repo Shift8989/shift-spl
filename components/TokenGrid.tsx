@@ -67,6 +67,7 @@ export function TokenGrid({ items, title }: { items: Specimen[]; title: string }
   const [mode, setMode] = useState<ModeKey>("all");
   const [sort, setSort] = useState<SortKey>("soon");
   const now = useNow();
+  const minute = Math.floor(now / 60_000);
 
   const list = useMemo(() => {
     const filtered = mode === "all" ? items : items.filter((s) => s.mode === mode);
@@ -87,7 +88,7 @@ export function TokenGrid({ items, title }: { items: Specimen[]; title: string }
     return arr;
     // re-sort at most once a minute, not on every tick
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, mode, sort, Math.floor(now / 60_000)]);
+  }, [items, mode, sort, minute]);
 
   return (
     <section className="mt-14 border-t border-line py-10">
