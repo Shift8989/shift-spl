@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Unbounded } from "next/font/google";
 import "./globals.css";
 import { Shell } from "@/components/Shell";
-import { WalletProvider } from "@/components/WalletProvider";
-import { ClusterContext } from "@/components/ClusterContext";
+import { Providers } from "@/components/Providers";
 
 const CLUSTER = (process.env.NEXT_PUBLIC_CLUSTER ?? "devnet") as "devnet" | "mainnet-beta";
 
@@ -22,11 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable} ${unbounded.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <ClusterContext.Provider value={CLUSTER}>
-          <WalletProvider>
-            <Shell>{children}</Shell>
-          </WalletProvider>
-        </ClusterContext.Provider>
+        <Providers cluster={CLUSTER}>
+          <Shell>{children}</Shell>
+        </Providers>
       </body>
     </html>
   );
