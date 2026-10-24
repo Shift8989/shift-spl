@@ -4,12 +4,14 @@ import { ENV } from "./env";
 import { listTokens, applyShift, currentRound, type TokenRow } from "./tokens";
 import { getTrending } from "./trending";
 import { tokenBalance } from "./chain";
+import { processGraduations } from "./graduate";
+import type { Address } from "viem";
 
-type Report = { scheduled: number; votes: number; auto: number; errors: string[] };
+type Report = { scheduled: number; votes: number; auto: number; migrated: number; errors: string[] };
 
 /** Runs every few minutes (Vercel cron). Applies due schedules, closes finished vote rounds, mirrors trending for auto tokens. */
 export async function runKeeper(): Promise<Report> {
-  const rep: Report = { scheduled: 0, votes: 0, auto: 0, errors: [] };
+  const rep: Report = { scheduled: 0, votes: 0, auto: 0, migrated: 0, errors: [] };
   if (!(await acquireLock("keeper", 240))) {
     rep.errors.push("keeper already running");
     return rep;
@@ -76,6 +78,11 @@ export async function runKeeper(): Promise<Report> {
         }
       }
     }
+
+    // 4. graduated curves: move funds out for the DEX pool
+    const g = await processGraduations();
+    rep.migrated = g.done.length;
+    rep.errors.push(...g.errors);
   } finally {
     await q(`update keeper_runs set finished_at = now(), detail = $2 where id = $1`, [run?.id ?? 0, JSON.stringify(rep)]);
     await releaseLock("keeper");
@@ -93,12 +100,12 @@ async function tallyRound(t: TokenRow, round: number) {
   const votes = await q<{ voter: string; proposal_id: number }>(`select voter, proposal_id from votes where mint = $1 and round = $2`, [t.mint, round]);
   const weight = new Map<number, number>();
   for (const v of votes) {
-    const w = await tokenBalance(v.voter, t.mint);
+    const w = await tokenBalance(v.voter as Address, t.mint as Address);
     weight.set(v.proposal_id, (weight.get(v.proposal_id) ?? 0) + w);
   }
   // a proposal counts as a vote from its proposer too
   for (const p of proposals) {
-    if (!votes.some((v) => v.voter === p.proposer)) weight.set(p.id, (weight.get(p.id) ?? 0) + (await tokenBalance(p.proposer, t.mint)));
+    if (!votes.some((v) => v.voter === p.proposer)) weight.set(p.id, (weight.get(p.id) ?? 0) + (await tokenBalance(p.proposer as Address, t.mint as Address)));
   }
   let best = proposals[0];
   let bestW = -1;

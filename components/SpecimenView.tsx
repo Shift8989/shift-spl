@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { useAccount, useWriteContract, usePublicClient, useSignMessage } from "wagmi";
+import { parseEther, type Address } from "viem";
+import { launchpadAbi, tokenAbi } from "@/lib/abi";
 import type { SpecimenDetail } from "@/lib/types";
 import { fmtUsd, mcapUsd, MODE_LABEL, timeAgo, short, fmtPriceSol, fmtPriceUsd, SOL_USD, countdown, nextBoundary, fmtNum, explorer } from "@/lib/format";
 import { statusLine } from "./TokenCard";
@@ -11,9 +13,8 @@ import { ConnectButton } from "./ConnectButton";
 import { PriceChart } from "./PriceChart";
 import { candlesFromTrades } from "@/lib/candles";
 import { post, usePoll, fileToDataUrl } from "@/lib/api";
-import { signAndSend, signMessage, explain, nowTs } from "@/lib/wallet";
-import { useCluster } from "./ClusterContext";
-import { ClockIcon, ExternalIcon, SolIcon, ChevronDown, UploadIcon } from "./Icons";
+import { explain, nowTs } from "@/lib/wallet";
+import { ClockIcon, ExternalIcon, EthIcon, ChevronDown, UploadIcon } from "./Icons";
 
 const TF = [
   { key: "1m", sec: 60 },
@@ -32,9 +33,8 @@ export function SpecimenView({ mint }: { mint: string }) {
 
 function Loaded({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) {
   const now = useNow();
-  const wallet = useWallet();
-  const cluster = useCluster();
-  const ex = explorer(cluster);
+  const { address, isConnected } = useAccount();
+  const ex = explorer();
   const [tf, setTf] = useState("15m");
   const [copied, setCopied] = useState(false);
   const ago = (iso: string) => (now ? timeAgo(iso, now) : "…");
@@ -43,7 +43,7 @@ function Loaded({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) {
   const candles = useMemo(() => candlesFromTrades(s.trades, TF.find((t) => t.key === tf)!.sec, s.live.priceSol * SOL_USD), [s.trades, s.live.priceSol, tf]);
   const first = candles[0]?.open ?? priceUsd;
   const change = first > 0 ? ((priceUsd - first) / first) * 100 : 0;
-  const isCreator = wallet.connected && wallet.publicKey?.toBase58() === s.creator;
+  const isCreator = isConnected && address?.toLowerCase() === s.creator.toLowerCase();
 
   const copy = async () => {
     try {
@@ -101,7 +101,7 @@ function Loaded({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) {
                     dev {short(s.creator)}
                   </a>
                   <a className="chip cursor-pointer transition-colors hover:border-line-strong hover:text-ink" href={ex("account", s.mint)} target="_blank" rel="noreferrer">
-                    solscan
+                    blockscout
                   </a>
                   {s.twitter && (
                     <a className="chip cursor-pointer transition-colors hover:border-line-strong hover:text-ink" href={s.twitter} target="_blank" rel="noreferrer">
@@ -156,7 +156,7 @@ function Loaded({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) {
                 <span className="kicker">Auto · trending</span>
                 <span className="mono text-[11px] text-ink">next run in {now ? countdown(nextBoundary(30, now) - now) : "…"}</span>
               </div>
-              <p className="mono px-3 py-3 text-[11px] leading-relaxed text-ink-faint">Every keeper run this token takes the identity of a memecoin trending on Solana right now. Nobody signs; the launchpad&apos;s update authority rewrites the metadata.</p>
+              <p className="mono px-3 py-3 text-[11px] leading-relaxed text-ink-faint">Every keeper run this token takes the identity of a memecoin trending right now. Nobody signs; the launchpad&apos;s update authority rewrites the identity on-chain.</p>
             </section>
           )}
 
@@ -239,7 +239,7 @@ function Loaded({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) {
                 <div className="mono grid grid-cols-[72px_56px_1fr_1fr_1fr_40px] gap-3 border-b border-line px-3 py-1.5 text-[10px] text-ink-faint uppercase">
                   <span>when</span>
                   <span>side</span>
-                  <span>{s.pair?.symbol ?? "sol"}</span>
+                  <span>eth</span>
                   <span>${s.symbol}</span>
                   <span>trader</span>
                   <span className="text-right">tx</span>
@@ -272,8 +272,9 @@ function Loaded({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) {
 }
 
 function TradePanel({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) {
-  const wallet = useWallet();
-  const { connection } = useConnection();
+  const { address, isConnected } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
   const [slip, setSlip] = useState(1);
@@ -281,10 +282,10 @@ function TradePanel({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) 
   const [quote, setQuote] = useState<{ amountOut: number; minimumAmountOut: number; tradingFee: number; quoteSymbol: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const owner = wallet.publicKey?.toBase58() ?? null;
+  const owner = address ?? null;
   const { data: bal } = usePoll<{ sol: number; token: number }>(owner ? `/api/balance?owner=${owner}&mint=${s.mint}` : null, 20_000);
   const amt = Number(amount || 0);
-  const quoteSym = s.pair?.symbol ?? "SOL";
+  const quoteSym = "ETH";
 
   // debounce quote
   const [qt, setQt] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -306,15 +307,30 @@ function TradePanel({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) 
   };
 
   const trade = async () => {
-    if (!wallet.publicKey) return;
+    if (!address || !publicClient) return;
     setMsg(null);
     try {
-      setBusy("Building…");
-      const tx = await post<{ txBase64: string; lastValidBlockHeight: number; expectedOut: number }>("/api/trade/tx", { mint: s.mint, side, amount: amt, slippageBps: slip * 100, owner: wallet.publicKey.toBase58() });
-      setBusy("Sign in your wallet…");
-      const signature = await signAndSend(wallet, connection, tx.txBase64, tx.lastValidBlockHeight);
-      setBusy("Recording…");
-      await post("/api/trade/confirm", { mint: s.mint, signature, side, quoteAmount: side === "buy" ? amt : tx.expectedOut, baseAmount: side === "buy" ? tx.expectedOut : amt, trader: wallet.publicKey.toBase58() });
+      setBusy("Quoting…");
+      const q = await post<{ amountInWei: string; minOutWei: string }>("/api/trade/quote", { mint: s.mint, side, amount: amt, slippageBps: slip * 100 });
+      const token = s.mint as Address;
+      const launchpad = s.pool as Address;
+      let hash: `0x${string}`;
+      if (side === "buy") {
+        setBusy("Confirm in your wallet…");
+        hash = await writeContractAsync({ address: launchpad, abi: launchpadAbi, functionName: "buy", args: [token, BigInt(q.minOutWei)], value: BigInt(q.amountInWei) });
+      } else {
+        const allowance = (await publicClient.readContract({ address: token, abi: tokenAbi, functionName: "allowance", args: [address, launchpad] })) as bigint;
+        if (allowance < BigInt(q.amountInWei)) {
+          setBusy("Approve in your wallet…");
+          const a = await writeContractAsync({ address: token, abi: tokenAbi, functionName: "approve", args: [launchpad, parseEther("1000000000")] });
+          await publicClient.waitForTransactionReceipt({ hash: a });
+        }
+        setBusy("Confirm in your wallet…");
+        hash = await writeContractAsync({ address: launchpad, abi: launchpadAbi, functionName: "sell", args: [token, BigInt(q.amountInWei), BigInt(q.minOutWei)] });
+      }
+      setBusy("Confirming on-chain…");
+      await publicClient.waitForTransactionReceipt({ hash });
+      await post("/api/trade/confirm", { mint: s.mint, hash });
       setAmount("");
       setQuote(null);
       refresh();
@@ -336,20 +352,14 @@ function TradePanel({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) 
       </div>
       <div className="mt-3 flex items-center justify-between text-[11.5px] text-ink-faint">
         <span>You pay</span>
-        {bal && <span className="mono">balance {side === "buy" ? `${fmtNum(bal.sol, 3)} SOL` : `${fmtNum(bal.token, 0)} ${s.symbol}`}</span>}
+        {bal && <span className="mono">balance {side === "buy" ? `${fmtNum(bal.sol, 4)} ETH` : `${fmtNum(bal.token, 0)} ${s.symbol}`}</span>}
       </div>
       <div className="relative mt-1.5">
         <input className="field mono h-12 pr-24 text-[18px]" inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmt(e.target.value)} />
         <span className="pointer-events-none absolute top-1/2 right-4 flex -translate-y-1/2 items-center gap-1.5 text-[15px] font-semibold">
           {side === "buy" ? (
             <>
-              {s.pair?.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img alt="" src={s.pair.image} className="size-[18px] rounded-full" />
-              ) : (
-                <SolIcon size={18} />
-              )}{" "}
-              {quoteSym}
+              <EthIcon size={18} /> {quoteSym}
             </>
           ) : (
             <span className="mono">${s.symbol}</span>
@@ -357,7 +367,7 @@ function TradePanel({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) 
         </span>
       </div>
       <div className="mt-2 grid grid-cols-4 gap-1.5">
-        {(side === "buy" ? ["0.1", "0.5", "1", "5"] : ["25%", "50%", "75%", "100%"]).map((v) => (
+        {(side === "buy" ? ["0.01", "0.05", "0.1", "0.5"] : ["25%", "50%", "75%", "100%"]).map((v) => (
           <button
             key={v}
             type="button"
@@ -400,21 +410,22 @@ function TradePanel({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) 
         <Row k="Minimum received" v={quote ? (side === "buy" ? `${fmtNum(quote.minimumAmountOut, 0)} ${s.symbol}` : `${fmtNum(quote.minimumAmountOut, 4)} ${quoteSym}`) : "—"} />
         <Row k="Trading fee" v={quote ? `${fmtNum(quote.tradingFee, 5)} ${quoteSym}` : "—"} />
       </div>
-      {wallet.connected ? (
-        <button type="button" className="btn btn-green mt-4 w-full" disabled={!(amt > 0) || !quote || Boolean(busy) || s.live.migrated} onClick={trade}>
-          {busy ?? (s.live.migrated ? "Graduated · trade on DAMM v2" : side === "buy" ? `Buy $${s.symbol}` : `Sell $${s.symbol}`)}
+      {isConnected ? (
+        <button type="button" className="btn btn-green mt-4 w-full" disabled={!(amt > 0) || !quote || Boolean(busy) || s.live.curveComplete} onClick={trade}>
+          {busy ?? (s.live.curveComplete ? "Graduated · trade on Uniswap v4" : side === "buy" ? `Buy $${s.symbol}` : `Sell $${s.symbol}`)}
         </button>
       ) : (
         <ConnectButton className="btn-green mt-4" full />
       )}
       {msg && <p className="mono mt-2 text-[10.5px] text-red">{msg}</p>}
-      <p className="mt-3 text-center text-[10.5px] text-ink-faint">Meteora DBC curve paired with {quoteSym} · 1% trading fee · graduates to DAMM v2 at {fmtNum(s.live.thresholdSol, 0)} {quoteSym}</p>
+      <p className="mt-3 text-center text-[10.5px] text-ink-faint">STS-1 bonding curve paired with {quoteSym} · 1% trading fee · graduates to Uniswap v4 after {fmtNum(s.live.thresholdSol, 2)} {quoteSym} raised</p>
     </div>
   );
 }
 
 function ShiftPanel({ s, isCreator, refresh }: { s: SpecimenDetail; isCreator: boolean; refresh: () => void }) {
-  const wallet = useWallet();
+  const { address } = useAccount();
+  const { signMessageAsync } = useSignMessage();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
@@ -428,8 +439,8 @@ function ShiftPanel({ s, isCreator, refresh }: { s: SpecimenDetail; isCreator: b
     try {
       const ts = nowTs();
       const sym = symbol.trim().replace(/^\$/, "");
-      const { signature, signer } = await signMessage(wallet, `shift:${s.mint}:${s.generation + 1}:${name.trim()}:${sym}:${ts}`);
-      await post("/api/shift", { mint: s.mint, name: name.trim(), symbol: sym, image: image ?? undefined, ts, signer, signature });
+      const signature = await signMessageAsync({ message: `shift:${s.mint}:${s.generation + 1}:${name.trim()}:${sym}:${ts}` });
+      await post("/api/shift", { mint: s.mint, name: name.trim(), symbol: sym, image: image ?? undefined, ts, signer: address, signature });
       setOpen(false);
       setName("");
       setSymbol("");
@@ -467,7 +478,7 @@ function ShiftPanel({ s, isCreator, refresh }: { s: SpecimenDetail; isCreator: b
               <input className="field" placeholder="New name" maxLength={32} value={name} onChange={(e) => setName(e.target.value)} />
               <input className="field mono" placeholder="Ticker" maxLength={10} value={symbol} onChange={(e) => setSymbol(e.target.value)} />
               <button type="button" className="btn btn-sm sm:col-span-3" disabled={busy || !name.trim() || !symbol.trim()} onClick={submit}>
-                {busy ? "Rewriting on-chain…" : "Sign the shift (free)"}
+                {busy ? "Rewriting on-chain…" : "Sign the shift (no gas)"}
               </button>
               {msg && <p className="mono text-[10.5px] text-red sm:col-span-3">{msg}</p>}
               <p className="mono text-[10.5px] text-ink-faint sm:col-span-3">Your wallet signs a message, the launchpad&apos;s update authority rewrites name, ticker and image in one transaction. Empty image keeps the current one.</p>
@@ -482,7 +493,8 @@ function ShiftPanel({ s, isCreator, refresh }: { s: SpecimenDetail; isCreator: b
 }
 
 function VotePanel({ s, now, refresh }: { s: SpecimenDetail; now: number; refresh: () => void }) {
-  const wallet = useWallet();
+  const { address, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
   const v = s.vote!;
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -490,9 +502,9 @@ function VotePanel({ s, now, refresh }: { s: SpecimenDetail; now: number; refres
   const [image, setImage] = useState<string | null>(null);
   const [busy, setBusy] = useState<number | "p" | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const me = wallet.publicKey?.toBase58();
-  const voted = me ? v.voters.includes(me) : false;
-  const proposed = me ? v.proposals.some((p) => p.proposer === me) : false;
+  const me = address?.toLowerCase();
+  const voted = me ? v.voters.some((x) => x.toLowerCase() === me) : false;
+  const proposed = me ? v.proposals.some((p) => p.proposer.toLowerCase() === me) : false;
 
   const propose = async () => {
     setBusy("p");
@@ -500,8 +512,8 @@ function VotePanel({ s, now, refresh }: { s: SpecimenDetail; now: number; refres
     try {
       const ts = nowTs();
       const sym = symbol.trim().replace(/^\$/, "");
-      const { signature, signer } = await signMessage(wallet, `propose:${s.mint}:${v.round}:${name.trim()}:${sym}:${ts}`);
-      await post("/api/vote/propose", { mint: s.mint, name: name.trim(), symbol: sym, image: image ?? undefined, ts, signer, signature });
+      const signature = await signMessageAsync({ message: `propose:${s.mint}:${v.round}:${name.trim()}:${sym}:${ts}` });
+      await post("/api/vote/propose", { mint: s.mint, name: name.trim(), symbol: sym, image: image ?? undefined, ts, signer: address, signature });
       setOpen(false);
       refresh();
     } catch (e) {
@@ -515,8 +527,8 @@ function VotePanel({ s, now, refresh }: { s: SpecimenDetail; now: number; refres
     setMsg(null);
     try {
       const ts = nowTs();
-      const { signature, signer } = await signMessage(wallet, `vote:${s.mint}:${v.round}:${id}:${ts}`);
-      await post("/api/vote/cast", { mint: s.mint, proposalId: id, ts, signer, signature });
+      const signature = await signMessageAsync({ message: `vote:${s.mint}:${v.round}:${id}:${ts}` });
+      await post("/api/vote/cast", { mint: s.mint, proposalId: id, ts, signer: address, signature });
       refresh();
     } catch (e) {
       setMsg(explain(e));
@@ -543,7 +555,7 @@ function VotePanel({ s, now, refresh }: { s: SpecimenDetail; now: number; refres
               <span className="mono block text-[11px] text-ink-faint">${p.symbol} · by {short(p.proposer)}</span>
             </span>
             <span className="mono text-[11px] text-ink-soft">{p.votes} vote{p.votes === 1 ? "" : "s"}</span>
-            {wallet.connected && (
+            {isConnected && (
               <button type="button" disabled={busy !== null} onClick={() => cast(p.id)} className="btn btn-sm">
                 {busy === p.id ? "…" : voted ? "Change vote" : "Vote"}
               </button>
@@ -552,7 +564,7 @@ function VotePanel({ s, now, refresh }: { s: SpecimenDetail; now: number; refres
         ))
       )}
       <div className="p-3">
-        {wallet.connected ? (
+        {isConnected ? (
           <>
             {!proposed && (
               <button type="button" className="btn btn-sm w-full" onClick={() => setOpen((o) => !o)}>
@@ -573,7 +585,7 @@ function VotePanel({ s, now, refresh }: { s: SpecimenDetail; now: number; refres
                 <input className="field" placeholder="Proposed name" maxLength={32} value={name} onChange={(e) => setName(e.target.value)} />
                 <input className="field mono" placeholder="Ticker" maxLength={10} value={symbol} onChange={(e) => setSymbol(e.target.value)} />
                 <button type="button" className="btn btn-sm btn-ink sm:col-span-3" disabled={busy !== null || !name.trim() || !symbol.trim()} onClick={propose}>
-                  {busy === "p" ? "Signing…" : "Sign the proposal (free)"}
+                  {busy === "p" ? "Signing…" : "Sign the proposal (no gas)"}
                 </button>
               </div>
             )}

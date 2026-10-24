@@ -5,12 +5,11 @@ import { usePoll } from "@/lib/api";
 import type { Shift } from "@/lib/types";
 import { TimeAgo } from "./TimeAgo";
 import { ExternalIcon } from "./Icons";
-import { useCluster } from "./ClusterContext";
 import { explorer } from "@/lib/format";
 
 export function ShiftLog() {
   const { data, error } = usePoll<Shift[]>("/api/shifts", 20_000);
-  const ex = explorer(useCluster());
+  const ex = explorer();
   return (
     <div className="term mt-8">
       <div className="mono grid grid-cols-[80px_1fr_120px_40px] gap-3 border-b border-line px-4 py-2 text-[10px] text-ink-faint uppercase">

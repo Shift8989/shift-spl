@@ -1,14 +1,14 @@
-import { getToken } from "@/lib/server/tokens";
+import { getTokenBySalt } from "@/lib/server/tokens";
 import { imageUrl } from "@/lib/server/images";
 import { ENV } from "@/lib/server/env";
 import { handler, ok, bad } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
 
-/** Off-chain metadata document. The on-chain URI points here, so every wallet sees the current identity. */
-export const GET = handler(async (_req: Request, ctx: { params: Promise<{ mint: string }> }) => {
-  const { mint } = await ctx.params;
-  const t = await getToken(mint);
+/** Off-chain metadata document behind each token's tokenURI. Always serves the current identity. */
+export const GET = handler(async (_req: Request, ctx: { params: Promise<{ salt: string }> }) => {
+  const { salt } = await ctx.params;
+  const t = await getTokenBySalt(salt);
   if (!t) return bad("not found", 404);
   return ok(
     {
@@ -16,7 +16,7 @@ export const GET = handler(async (_req: Request, ctx: { params: Promise<{ mint: 
       symbol: t.symbol,
       description: t.description ?? "",
       image: `${ENV.baseUrl}${imageUrl(t.image_id)}`,
-      showName: true,
+      token: t.mint,
       createdOn: ENV.baseUrl,
       twitter: t.twitter ?? undefined,
       website: t.website ?? undefined,

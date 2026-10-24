@@ -147,7 +147,7 @@ export function HeroDiagram() {
           <div className="mono mt-3 w-full truncate text-center text-[12px] text-ink">
             {name} <span className="text-ink-soft">${symbol}</span>
           </div>
-          <div className="mono text-[10.5px] text-ink-faint">SPL mint {mintShort("ShFt4kQ9vN2mX7rT1wB5yL8cH3jP6dG0zA2eK4uM9sV1")}</div>
+          <div className="mono text-[10.5px] text-ink-faint">ERC-20 {mintShort("0x5h1f7a9c3e2b8d4f6a1c9e7b3d5f2a8c4e6b1d9f")}</div>
         </div>
 
         <Box style={boxStyle("authority", 540, 20)} tag="authority" title="signs" sub="launchpad holds update authority" k={cycle} />
@@ -156,7 +156,7 @@ export function HeroDiagram() {
         <Box style={boxStyle("holders", 540, 170)} tag="holders" title="same mint" sub="balances never move" k={cycle} />
 
         <div className="mono absolute text-[10.5px] text-ink-faint" style={{ left: 540, top: 266 }}>
-          UpdateMetadataAccountV2 · one transaction · {source.key} triggered
+          ShiftToken.shift() · one transaction · {source.key} triggered
         </div>
       </div>
     </div>

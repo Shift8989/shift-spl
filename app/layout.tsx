@@ -4,7 +4,6 @@ import "./globals.css";
 import { Shell } from "@/components/Shell";
 import { Providers } from "@/components/Providers";
 
-const CLUSTER = (process.env.NEXT_PUBLIC_CLUSTER ?? "devnet") as "devnet" | "mainnet-beta";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
@@ -21,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable} ${unbounded.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <Providers cluster={CLUSTER}>
+        <Providers>
           <Shell>{children}</Shell>
         </Providers>
       </body>

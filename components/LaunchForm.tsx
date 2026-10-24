@@ -2,22 +2,24 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { useAccount, useWriteContract, usePublicClient } from "wagmi";
+import { launchpadAbi } from "@/lib/abi";
+import type { Address, Hex } from "viem";
 import type { Config, Mode, PairConfig } from "@/lib/types";
 import { post, usePoll, fileToDataUrl } from "@/lib/api";
-import { signAndSend, explain } from "@/lib/wallet";
+import { explain } from "@/lib/wallet";
 import { ConnectButton } from "./ConnectButton";
-import { SolIcon, UploadIcon, WalletIcon, KeyIcon, TimerIcon, TrendIcon, VoteIcon } from "./Icons";
+import { EthIcon, UploadIcon, WalletIcon, KeyIcon, TimerIcon, TrendIcon, VoteIcon } from "./Icons";
 
 const MODES: { key: Mode; label: string; desc: string; note: string }[] = [
   { key: "manual", label: "Manual", desc: "You shift it from the token page whenever you want, by signing with your wallet", note: "Change the name, ticker or image from the token page, any time. Only your wallet can ask. Signing is free; the launchpad pays the rewrite." },
-  { key: "auto", label: "Auto · trending", desc: "Every keeper run it becomes a memecoin trending on Solana right now", note: "Every keeper run (30 min) the token takes the name, ticker and image of whatever is trending on Solana. No input needed after launch." },
+  { key: "auto", label: "Auto · trending", desc: "Every keeper run it becomes a memecoin that is trending right now", note: "Every keeper run (30 min) the token takes the name, ticker and image of whatever is trending right now. No input needed after launch." },
   { key: "scheduled", label: "Scheduled", desc: "Plan up to 4 identities now, each switching in at a set time", note: "Plan the identities now. The keeper rewrites the token at each scheduled time, in order, then stops." },
   { key: "vote", label: "Holder vote", desc: "Holders propose and vote each round; the winner becomes its next identity", note: "Each round (60 min) holders propose and vote by balance. When the round closes, the winning proposal becomes the token's next identity." },
 ];
 
 function pairName(p: PairConfig) {
-  return p.kind === "sol" ? "Solana" : p.name.replace(/ xStock$/, "");
+  return p.kind === "sol" ? "Ether" : p.name.replace(/ xStock$/, "");
 }
 
 type Planned = { name: string; symbol: string; image: string | null; at: string };
@@ -30,8 +32,9 @@ const inHours = (h: number) => {
 };
 
 export function LaunchForm() {
-  const wallet = useWallet();
-  const { connection } = useConnection();
+  const { address, isConnected } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
   const router = useRouter();
   const { data: config } = usePoll<Config>("/api/config", 0);
   const pairs = useMemo(() => config?.pairs ?? [], [config]);
@@ -41,49 +44,48 @@ export function LaunchForm() {
   const [desc, setDesc] = useState("");
   const [x, setX] = useState("");
   const [web, setWeb] = useState("");
-  const [pair, setPair] = useState("SOL");
+  const [pair, setPair] = useState("ETH");
   const [mode, setMode] = useState<Mode>("manual");
   const [buy, setBuy] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [plan, setPlan] = useState<Planned[]>([{ name: "", symbol: "", image: null, at: inHours(6) }]);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const selected = pairs.find((p) => p.symbol === pair) ?? pairs[0];
   const modeMeta = MODES.find((m) => m.key === mode)!;
 
-  const onFile = async (f: File | undefined, set: (v: string) => void) => {
-    if (!f) return;
-    if (f.size > 5 * 1024 * 1024) return setMsg("Image must be 5 MB or less.");
-    set(await fileToDataUrl(f));
-  };
-
   const ready = name.trim() && ticker.trim() && image && (mode !== "scheduled" || plan.every((p) => p.name && p.symbol && p.at));
 
   const submit = async () => {
-    if (!wallet.publicKey || !selected) return;
+    if (!address || !publicClient) return;
     setMsg(null);
     try {
-      setBusy("Preparing the pool…");
-      const prep = await post<{ mint: string; pool: string; txBase64: string; lastValidBlockHeight: number }>("/api/launch/prepare", {
-        creator: wallet.publicKey.toBase58(),
+      setBusy("Preparing…");
+      const prep = await post<{ token: Address; salt: Hex; uri: string; name: string; symbol: string; modeIndex: number; launchpad: Address; firstBuyWei: string }>("/api/launch/prepare", {
+        creator: address,
         name: name.trim(),
         symbol: ticker.trim(),
         description: desc,
         twitter: x,
         website: web,
         image,
-        quoteMint: selected.quoteMint,
         mode,
-        firstBuyLamports: Math.round(Number(buy || 0) * 1e9),
+        firstBuyEth: Number(buy || 0),
         schedule: mode === "scheduled" ? plan.map((p) => ({ ...p, image: p.image ?? undefined, at: new Date(p.at).toISOString() })) : undefined,
       });
-      setBusy("Sign in your wallet…");
-      const signature = await signAndSend(wallet, connection, prep.txBase64, prep.lastValidBlockHeight);
+      setBusy("Confirm in your wallet…");
+      const hash = await writeContractAsync({
+        address: prep.launchpad,
+        abi: launchpadAbi,
+        functionName: "launch",
+        args: [prep.name, prep.symbol, prep.uri, prep.modeIndex, prep.salt, 0n],
+        value: BigInt(prep.firstBuyWei),
+      });
       setBusy("Confirming on-chain…");
-      await post("/api/launch/confirm", { mint: prep.mint, signature });
-      router.push(`/specimen/${prep.mint}`);
+      await publicClient.waitForTransactionReceipt({ hash });
+      await post("/api/launch/confirm", { token: prep.token, hash });
+      router.push(`/specimen/${prep.token}`);
     } catch (e) {
       setMsg(explain(e));
     } finally {
@@ -101,10 +103,7 @@ export function LaunchForm() {
           <div className="kicker">Launch</div>
           <h1 className="display mt-1.5 text-[30px]">New token</h1>
         </div>
-        <span className="mono text-[11px] text-ink-faint">
-          SPL · Meteora DBC · paired with {selected?.symbol ?? "SOL"}
-          {config?.cluster === "devnet" ? " · devnet" : ""}
-        </span>
+        <span className="mono text-[11px] text-ink-faint">ERC-20 · STS-1 bonding curve · paired with ETH · {config?.chain.name.toLowerCase() ?? "robinhood chain"}</span>
       </div>
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4">
@@ -152,7 +151,7 @@ export function LaunchForm() {
           </section>
 
           <section className="card p-5">
-            <Head n="03" title="Pair with" sub={config?.cluster === "devnet" ? "Devnet pools are paired with SOL. Stock pairs are live on mainnet." : "What the curve trades against."} />
+            <Head n="03" title="Pair with" sub="What the curve trades against. Trades are paid in ETH on Robinhood Chain." />
             <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               {pairs.map((p) => {
                 const on = p.symbol === pair;
@@ -167,7 +166,7 @@ export function LaunchForm() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img alt="" className="size-[22px] shrink-0 rounded-full bg-card-2 object-cover" src={p.image} />
                     ) : (
-                      <SolIcon className="shrink-0" />
+                      <EthIcon className="shrink-0" />
                     )}
                     <span className="min-w-0">
                       <span className="block truncate text-[12.5px] font-semibold">{p.symbol}</span>
@@ -268,7 +267,7 @@ export function LaunchForm() {
               <div className="min-w-0">
                 <div className="truncate text-[14px] font-semibold">{name || "Untitled"}</div>
                 <div className="mono text-[11px] text-ink-soft">
-                  ${ticker || "ticker"} · {modeMeta.label} · {selected?.symbol ?? "SOL"} pair
+                  ${ticker || "ticker"} · {modeMeta.label} · {selected?.symbol ?? "ETH"} pair
                 </div>
               </div>
             </div>
@@ -278,7 +277,7 @@ export function LaunchForm() {
             <div className="relative">
               <input id="buy" className="field mono pr-16" inputMode="decimal" placeholder="0" value={buy} onChange={(e) => setBuy(e.target.value.replace(/[^0-9.]/g, ""))} />
               <span className="pointer-events-none absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-1 text-[12px] font-semibold">
-                <SolIcon size={14} /> SOL
+                <EthIcon size={14} /> ETH
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between text-[11px] text-ink-faint">
@@ -291,20 +290,19 @@ export function LaunchForm() {
                 ))}
               </div>
             </div>
-            {wallet.connected ? (
+            {isConnected ? (
               <button type="button" disabled={Boolean(busy) || !ready || !config?.configured} onClick={submit} className="btn btn-ink mt-3 w-full">
                 {busy ?? "Launch token"}
               </button>
             ) : (
               <ConnectButton className="btn-ink mt-3" full />
             )}
-            {config && !config.configured && <p className="mono mt-2 text-[10.5px] text-red">Launchpad signer is not configured on this deployment.</p>}
+            {config && !config.configured && <p className="mono mt-2 text-[10.5px] text-red">Launchpad contract is not configured on this deployment.</p>}
             {msg && <p className="mono mt-2 text-[10.5px] text-red">{msg}</p>}
             <p className="mono mt-3 text-[10px] leading-relaxed text-ink-faint">
-              One transaction: mint, metadata (update authority = launchpad), bonding-curve pool, optional first buy. Pool rent ≈ 0.03 SOL plus fees.
+              One transaction: deploys the STS-1 token (update authority = launchpad), opens its bonding curve, optional first buy. Only gas to pay.
             </p>
           </section>
-          <input ref={fileRef} type="file" className="hidden" onChange={(e) => onFile(e.target.files?.[0], setImage)} />
         </aside>
       </div>
     </div>

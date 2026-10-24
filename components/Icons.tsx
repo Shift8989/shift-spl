@@ -149,3 +149,9 @@ export const SolIcon = ({ size = 22, className = "" }: P) => (
     />
   </svg>
 );
+export const EthIcon = ({ size = 22, className = "" }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+    <circle cx="12" cy="12" r="11.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    <path fill="currentColor" d="M12 4.5 7.2 12.4 12 15.2l4.8-2.8L12 4.5Zm0 11.9-4.8-2.8L12 19.5l4.8-5.9L12 16.4Z" />
+  </svg>
+);

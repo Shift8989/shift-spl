@@ -1,148 +1,17 @@
 [
- {
-  "id": "abstract",
-  "n": "01",
-  "title": "Abstract",
-  "children": []
- },
- {
-  "id": "motivation",
-  "n": "02",
-  "title": "Motivation",
-  "children": []
- },
- {
-  "id": "terminology",
-  "n": "03",
-  "title": "Terminology",
-  "children": []
- },
- {
-  "id": "token",
-  "n": "04",
-  "title": "The shiftable token",
-  "children": [
-   {
-    "id": "token-mint",
-    "title": "Mint and supply"
-   },
-   {
-    "id": "token-metadata",
-    "title": "Metadata account"
-   },
-   {
-    "id": "token-identity",
-    "title": "Identity"
-   },
-   {
-    "id": "token-json",
-    "title": "Off-chain document"
-   }
-  ]
- },
- {
-  "id": "shift",
-  "n": "05",
-  "title": "Shifts",
-  "children": [
-   {
-    "id": "shift-tx",
-    "title": "The transaction"
-   },
-   {
-    "id": "shift-invariants",
-    "title": "Invariants"
-   },
-   {
-    "id": "shift-generations",
-    "title": "Generations"
-   }
-  ]
- },
- {
-  "id": "modes",
-  "n": "06",
-  "title": "Shift modes",
-  "children": [
-   {
-    "id": "mode-manual",
-    "title": "Manual"
-   },
-   {
-    "id": "mode-scheduled",
-    "title": "Scheduled"
-   },
-   {
-    "id": "mode-auto",
-    "title": "Auto \u00b7 trending"
-   }
-  ]
- },
- {
-  "id": "authorization",
-  "n": "07",
-  "title": "Creator authorization",
-  "children": []
- },
- {
-  "id": "keeper",
-  "n": "08",
-  "title": "The keeper",
-  "children": []
- },
- {
-  "id": "concurrency",
-  "n": "09",
-  "title": "Concurrency and safety",
-  "children": []
- },
- {
-  "id": "lifecycle",
-  "n": "10",
-  "title": "Launch lifecycle",
-  "children": []
- },
- {
-  "id": "market",
-  "n": "11",
-  "title": "Market structure",
-  "children": []
- },
- {
-  "id": "trust",
-  "n": "12",
-  "title": "Trust model",
-  "children": []
- },
- {
-  "id": "integrate",
-  "n": "13",
-  "title": "Integrating",
-  "children": [
-   {
-    "id": "integrate-detect",
-    "title": "Detecting STS-1 tokens"
-   },
-   {
-    "id": "integrate-index",
-    "title": "Indexing shifts"
-   },
-   {
-    "id": "integrate-api",
-    "title": "HTTP API"
-   }
-  ]
- },
- {
-  "id": "faq",
-  "n": "14",
-  "title": "FAQ",
-  "children": []
- },
- {
-  "id": "versions",
-  "n": "15",
-  "title": "Versioning",
-  "children": []
- }
+ {"id": "abstract", "n": "01", "title": "Abstract", "children": []},
+ {"id": "motivation", "n": "02", "title": "Motivation", "children": []},
+ {"id": "terminology", "n": "03", "title": "Terminology", "children": []},
+ {"id": "token", "n": "04", "title": "The shiftable token", "children": [{"id": "token-mint", "title": "Supply and address"}, {"id": "token-metadata", "title": "Mutable identity"}, {"id": "token-identity", "title": "Identity"}, {"id": "token-json", "title": "Off-chain document"}]},
+ {"id": "shift", "n": "05", "title": "Shifts", "children": [{"id": "shift-tx", "title": "The transaction"}, {"id": "shift-invariants", "title": "Invariants"}, {"id": "shift-generations", "title": "Generations"}]},
+ {"id": "modes", "n": "06", "title": "Shift modes", "children": [{"id": "mode-manual", "title": "Manual"}, {"id": "mode-scheduled", "title": "Scheduled"}, {"id": "mode-auto", "title": "Auto · trending"}, {"id": "mode-vote", "title": "Holder vote"}]},
+ {"id": "authorization", "n": "07", "title": "Creator authorization", "children": []},
+ {"id": "keeper", "n": "08", "title": "The keeper", "children": []},
+ {"id": "concurrency", "n": "09", "title": "Concurrency and safety", "children": []},
+ {"id": "lifecycle", "n": "10", "title": "Launch lifecycle", "children": []},
+ {"id": "market", "n": "11", "title": "Market structure", "children": []},
+ {"id": "trust", "n": "12", "title": "Trust model", "children": []},
+ {"id": "integrate", "n": "13", "title": "Integrating", "children": [{"id": "integrate-detect", "title": "Detecting STS-1 tokens"}, {"id": "integrate-index", "title": "Indexing shifts"}, {"id": "integrate-api", "title": "HTTP API"}]},
+ {"id": "faq", "n": "14", "title": "FAQ", "children": []},
+ {"id": "versioning", "n": "15", "title": "Versioning", "children": []}
 ]

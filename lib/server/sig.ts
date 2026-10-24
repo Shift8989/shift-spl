@@ -1,14 +1,11 @@
 import "server-only";
-import nacl from "tweetnacl";
-import bs58 from "bs58";
+import type { Address, Hex } from "viem";
+import { verifySignedMessage } from "./chain";
 
-/** Verify an ed25519 signature produced by a wallet's signMessage. */
-export function verifySigned(message: string, signatureB58: string, pubkeyB58: string) {
-  try {
-    return nacl.sign.detached.verify(new TextEncoder().encode(message), bs58.decode(signatureB58), bs58.decode(pubkeyB58));
-  } catch {
-    return false;
-  }
+/** Verify an EIP-191 personal_sign signature from the user's wallet. */
+export async function verifySigned(message: string, signature: string, address: string) {
+  if (!/^0x[0-9a-fA-F]{130}$/.test(signature) || !/^0x[0-9a-fA-F]{40}$/.test(address)) return false;
+  return verifySignedMessage(message, signature as Hex, address as Address);
 }
 
 /** Signed messages carry a timestamp; reject stale ones to prevent replay. */

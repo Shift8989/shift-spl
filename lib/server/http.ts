@@ -30,4 +30,5 @@ export async function body<T = Record<string, unknown>>(req: Request): Promise<T
   }
 }
 
-export const isPubkey = (s: unknown): s is string => typeof s === "string" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
+export const isAddress = (s: unknown): s is `0x${string}` => typeof s === "string" && /^0x[0-9a-fA-F]{40}$/.test(s);
+export const isHash = (s: unknown): s is `0x${string}` => typeof s === "string" && /^0x[0-9a-fA-F]{64}$/.test(s);

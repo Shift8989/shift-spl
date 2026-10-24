@@ -1,44 +1,49 @@
-# shift · shiftable spl
+# shift · shiftable tokens on Robinhood Chain
 
-Launchpad for **STS-1** (Shiftable Token Standard) tokens on Solana: SPL tokens whose on-chain name, ticker and image can be rewritten after launch, by the creator, on a schedule, by holder vote, or by following what is trending. Same mint, same balances, new identity in every wallet.
+Launchpad for **STS-1** (Shiftable Token Standard) tokens: ERC-20s whose on-chain name, ticker and image can be rewritten after launch, by the creator, on a schedule, by holder vote, or by following what is trending. Same address, same balances, new identity in every wallet.
 
 ## How it works
 
-- **Launch** (`/lab`): one transaction signed in the user's wallet creates the mint, the Metaplex metadata (mutable, update authority = the launchpad's partner wallet), a Meteora Dynamic Bonding Curve pool, and an optional first buy. The mint keypair is generated and signed server-side (`/api/launch/prepare`), the wallet signs as payer/creator, `/api/launch/confirm` verifies the pool on-chain.
-- **Trade** (token page): quotes and swap transactions come from the DBC SDK (`/api/trade/quote`, `/api/trade/tx`); the wallet signs; `/api/trade/confirm` records the fill. Pools graduate to DAMM v2 at the migration threshold.
-- **Shift**: `UpdateMetadataAccountV2` (name, symbol, uri) + a `shift:<by>:<generation>` memo, signed by the launchpad. The URI points at `/api/meta/<mint>`, which always serves the current identity.
-  - *Manual*: the creator signs a free message (`shift:<mint>:<gen>:<name>:<symbol>:<ts>`), `/api/shift` verifies and rewrites.
-  - *Scheduled*: identities planned at launch, applied by the keeper when their time comes.
-  - *Holder vote*: proposals and votes are signed messages (`/api/vote/*`), weighed by token balance when the round closes.
-  - *Auto · trending*: every keeper run the token becomes a coin trending on Solana (DexScreener boosts feed).
-- **Keeper** (`/api/keeper`): Vercel cron every 5 minutes (`vercel.json`), protected by `CRON_SECRET`.
+- **Contracts** (`contracts/`): `ShiftToken` is an ERC-20 with mutable `name`/`symbol`/`tokenURI` and one mutator, `shift()`, callable only by the launchpad. `ShiftLaunchpad` deploys tokens with CREATE2, runs a virtual-reserve bonding curve (1.2 ETH / 1.073B virtual, 800M sold then graduation, 1% fee), holds the update authority and exposes `shift()` to its authority key. Compile with `node scripts/compile.mjs`, deploy with `node scripts/deploy.mjs`.
+- **Launch** (`/lab`): `/api/launch/prepare` stores the identity, fixes the salt and tokenURI and predicts the token address; the wallet calls `launch()` (optional first buy in ETH); `/api/launch/confirm` verifies the `Launched` event.
+- **Trade** (token page): quotes come from the contract's view functions; the wallet calls `buy()` / `sell()` directly; `/api/trade/confirm` records fills from the `Trade` events.
+- **Shift**: `ShiftLaunchpad.shift(token, name, symbol, uri, by)` from the authority key. The URI points at `/api/meta/<salt>`, which always serves the current identity.
+  - *Manual*: the creator signs a gas-free EIP-191 message, `/api/shift` verifies and rewrites.
+  - *Scheduled*: identities planned at launch, applied by the keeper.
+  - *Holder vote*: signed proposals and votes (`/api/vote/*`), weighed by balance when the round closes.
+  - *Auto · trending*: every keeper run the token becomes a trending memecoin (DexScreener boosts feed).
+- **Keeper** (`/api/keeper`, Vercel cron every 5 min, `CRON_SECRET`): schedules, vote rounds, trending, and `migrate()` of graduated curves.
+- **Uniswap v4**: Robinhood Chain addresses are in `lib/chain-config.ts`; graduated funds are moved out by the migrator for the v4 pool.
 
 ## Stack
 
-Next.js 16 · React 19 · Tailwind v4 · `@meteora-ag/dynamic-bonding-curve-sdk` · `@metaplex-foundation/mpl-token-metadata` (Umi) · `@solana/wallet-adapter` (Phantom, Solflare) · Postgres (Neon) with an embedded PGlite fallback for local dev · `lightweight-charts`.
+Next.js 16 · React 19 · Tailwind v4 · Solidity 0.8 (solc-js) · viem · wagmi (injected wallets: MetaMask, Rabby) · Postgres (Neon) with an embedded PGlite fallback for local dev · `lightweight-charts`.
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env.local   # then fill it
+cp .env.example .env.local      # fill it
+node scripts/compile.mjs
+node scripts/deploy.mjs         # writes NEXT_PUBLIC_LAUNCHPAD_ADDRESS to .env.local
 npm run dev
 ```
 
 | Variable | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_CLUSTER` | `devnet` or `mainnet-beta` |
-| `NEXT_PUBLIC_RPC_URL` | Solana RPC (use a paid RPC on mainnet) |
-| `NEXT_PUBLIC_BASE_URL` | Public URL, used in metadata URIs |
-| `LAUNCHPAD_SECRET_KEY` | base58 secret key of the launchpad wallet: pays config creation and every shift, holds update authority, claims partner fees |
+| `NEXT_PUBLIC_CHAIN` | `robinhood` (4663), `robinhood-testnet` (46630) or `local` (hardhat on 8545) |
+| `NEXT_PUBLIC_RPC_URL` | RPC override |
+| `NEXT_PUBLIC_BASE_URL` | Public URL, used in tokenURIs |
+| `NEXT_PUBLIC_LAUNCHPAD_ADDRESS` | Deployed `ShiftLaunchpad` |
+| `LAUNCHPAD_PRIVATE_KEY` | Authority / fee recipient / migrator key: pays gas for every shift and migration |
 | `CRON_SECRET` | bearer token for `/api/keeper` |
-| `DATABASE_URL` | Postgres connection string (Neon). Without it the app uses PGlite in `.data/` (local only) |
+| `DATABASE_URL` | Postgres (Neon). Without it: PGlite in `.data/` (local only) |
 
-Devnet helpers: `node scripts/devnet-fund.mjs` (airdrops, creates `.data/test-wallet.json`), `node scripts/e2e.mjs` (full flow against a running dev server).
+Local end-to-end: start a hardhat node (`npx hardhat node`, chain id 4663), fund the launchpad key, `NEXT_PUBLIC_CHAIN=local node scripts/deploy.mjs`, run the dev server, then `node scripts/e2e.mjs`.
 
 ## Layout
 
-- `app/` pages: `/` home, `/explore`, `/shifts` engine log, `/lab` launch, `/docs` STS-1 spec, `/specimen/[mint]` token page
+- `app/` pages: `/`, `/explore`, `/shifts`, `/lab`, `/docs` (STS-1 spec), `/specimen/[token]`
 - `app/api/` launch, trade, shift, vote, keeper, specimens, shifts, trending, config, meta, img, balance
-- `lib/server/` chain (DBC + Metaplex), db, tokens/shifts, keeper, trending, images, pairs
-- `components/` UI
+- `contracts/` Solidity + compiled artifacts · `scripts/` compile, deploy, e2e, contract test
+- `lib/server/` chain (viem), db, tokens/shifts, keeper, graduate, trending, images · `lib/` chain config, ABIs, client helpers

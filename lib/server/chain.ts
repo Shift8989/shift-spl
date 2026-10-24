@@ -1,156 +1,30 @@
 import "server-only";
-import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, getAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import BN from "bn.js";
-import bs58 from "bs58";
-import {
-  DynamicBondingCurveClient,
-  buildCurveWithMarketCap,
-  deriveDbcPoolAddress,
-  getCurrentPoint,
-  getPriceFromSqrtPrice,
-  TokenType,
-  TokenDecimal,
-  TokenAuthorityOption,
-  BaseFeeMode,
-  CollectFeeMode,
-  MigrationOption,
-  MigrationFeeOption,
-  ActivationType,
-} from "@meteora-ag/dynamic-bonding-curve-sdk";
-import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
-import { keypairIdentity, publicKey as umiPk, transactionBuilder, some, none } from "@metaplex-foundation/umi";
-import { fromWeb3JsInstruction } from "@metaplex-foundation/umi-web3js-adapters";
-import { mplTokenMetadata, updateV1, fetchMetadataFromSeeds } from "@metaplex-foundation/mpl-token-metadata";
+import { createPublicClient, createWalletClient, http, formatEther, parseEther, getContractAddress, encodeAbiParameters, keccak256, concatHex, stringToHex, decodeEventLog, verifyMessage, type Address, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { CHAIN } from "@/lib/chain-config";
+import { launchpadAbi, tokenAbi, tokenBytecode } from "@/lib/abi";
 import { ENV } from "./env";
-import { q, one } from "./db";
-import { pairByMint } from "./pairs";
 
-export const BASE_DECIMALS = 6;
+export const publicClient = createPublicClient({ chain: CHAIN, transport: http(ENV.rpcUrl, { timeout: 30_000 }), batch: { multicall: CHAIN.id !== 4663 || ENV.chainKey !== "local" } });
 
-/** Shape of the DBC virtual pool account (the SDK's IDL typing collapses it to `any`). */
-type PoolState = { config: PublicKey; creator: PublicKey; baseMint: PublicKey; sqrtPrice: BN; quoteReserve: BN; baseReserve: BN; isMigrated: number };
-function poolState(p: unknown): PoolState | null {
-  if (!p) return null;
-  const x = p as { poolState?: PoolState } & PoolState;
-  return (x.poolState ?? x) as PoolState;
-}
-const MEMO_PROGRAM = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
-
-export const connection = new Connection(ENV.rpcUrl, "confirmed");
-
-let _launchpad: Keypair | null = null;
-export function launchpad() {
-  if (!_launchpad) {
-    if (!ENV.launchpadSecret) throw new Error("LAUNCHPAD_SECRET_KEY is not set");
-    _launchpad = Keypair.fromSecretKey(bs58.decode(ENV.launchpadSecret));
-  }
-  return _launchpad;
+export function launchpadAccount() {
+  if (!ENV.launchpadKey) throw new Error("LAUNCHPAD_PRIVATE_KEY is not set");
+  return privateKeyToAccount(ENV.launchpadKey);
 }
 
-export const dbc = new DynamicBondingCurveClient(connection, "confirmed");
-
-function curveParams(quoteDecimals: number) {
-  return buildCurveWithMarketCap({
-    token: {
-      tokenType: TokenType.SPLToken,
-      tokenBaseDecimal: TokenDecimal.SIX,
-      tokenQuoteDecimal: quoteDecimals,
-      tokenAuthorityOption: TokenAuthorityOption.PartnerUpdateAuthority, // the launchpad keeps metadata update authority
-      totalTokenSupply: ENV.totalSupply,
-      leftover: 0,
-    },
-    fee: {
-      baseFeeParams: {
-        baseFeeMode: BaseFeeMode.FeeSchedulerLinear,
-        feeSchedulerParam: { startingFeeBps: ENV.tradingFeeBps, endingFeeBps: ENV.tradingFeeBps, numberOfPeriod: 0, totalDuration: 0 },
-      },
-      dynamicFeeEnabled: false,
-      collectFeeMode: CollectFeeMode.QuoteToken,
-      creatorTradingFeePercentage: 0,
-      poolCreationFee: 0,
-      enableFirstSwapWithMinFee: false,
-    },
-    migration: {
-      migrationOption: MigrationOption.MET_DAMM_V2,
-      migrationFeeOption: MigrationFeeOption.FixedBps100,
-      migrationFee: { feePercentage: 0, creatorFeePercentage: 0 },
-    },
-    liquidityDistribution: {
-      partnerPermanentLockedLiquidityPercentage: 100,
-      partnerLiquidityPercentage: 0,
-      creatorPermanentLockedLiquidityPercentage: 0,
-      creatorLiquidityPercentage: 0,
-    },
-    lockedVesting: { totalLockedVestingAmount: 0, numberOfVestingPeriod: 0, cliffUnlockAmount: 0, totalVestingDuration: 0, cliffDurationFromMigrationTime: 0 },
-    activationType: ActivationType.Timestamp,
-    initialMarketCap: ENV.initialMarketCap,
-    migrationMarketCap: ENV.migrationMarketCap,
-  });
+let _wallet: ReturnType<typeof createWalletClient> | null = null;
+function walletClient() {
+  _wallet ??= createWalletClient({ account: launchpadAccount(), chain: CHAIN, transport: http(ENV.rpcUrl, { timeout: 30_000 }) });
+  return _wallet;
 }
 
-/** One DBC config per quote mint, created on first use and signed by the launchpad (partner). */
-export async function getOrCreateConfig(quoteMint: string) {
-  const row = await one<{ config: string }>(`select config from configs where quote_mint = $1`, [quoteMint]);
-  if (row) return row.config;
-  const pair = pairByMint(quoteMint);
-  if (!pair) throw new Error("Unsupported quote mint");
-  const lp = launchpad();
-  const configKp = Keypair.generate();
-  const tx = await dbc.partner.createConfig({
-    config: configKp.publicKey,
-    feeClaimer: lp.publicKey,
-    leftoverReceiver: lp.publicKey,
-    payer: lp.publicKey,
-    quoteMint: new PublicKey(quoteMint),
-    ...curveParams(pair.decimals),
-  });
-  const sig = await sendTx(tx, [lp, configKp]);
-  await q(`insert into configs(quote_mint, config) values ($1, $2) on conflict (quote_mint) do nothing`, [quoteMint, configKp.publicKey.toBase58()]);
-  console.log(`[chain] created DBC config ${configKp.publicKey.toBase58()} for ${pair.symbol} (${sig})`);
-  return configKp.publicKey.toBase58();
-}
-
-export async function sendTx(tx: Transaction, signers: Keypair[]) {
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-  tx.recentBlockhash = blockhash;
-  tx.feePayer = signers[0].publicKey;
-  tx.sign(...signers);
-  const sig = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false });
-  await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-  return sig;
-}
-
-export function derivePool(quoteMint: string, baseMint: string, config: string) {
-  return deriveDbcPoolAddress(new PublicKey(quoteMint), new PublicKey(baseMint), new PublicKey(config)).toBase58();
-}
-
-/** Pool creation (+ optional first buy) as an unsigned-by-user transaction. The mint keypair signs here; creator/payer signs in the wallet. */
-export async function buildLaunchTx(p: { name: string; symbol: string; uriFor: (mint: string) => string; creator: string; quoteMint: string; firstBuyLamports: number }) {
-  const config = await getOrCreateConfig(p.quoteMint);
-  const mintKp = Keypair.generate();
-  const creator = new PublicKey(p.creator);
-  const tx = await dbc.creator.createPoolWithFirstBuy({
-    createPoolParam: { baseMint: mintKp.publicKey, config: new PublicKey(config), name: p.name, symbol: p.symbol, uri: p.uriFor(mintKp.publicKey.toBase58()), payer: creator, poolCreator: creator },
-    firstBuyParam:
-      p.firstBuyLamports > 0 ? { buyer: creator, buyAmount: new BN(p.firstBuyLamports), minimumAmountOut: new BN(1), referralTokenAccount: null } : undefined,
-  });
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-  tx.recentBlockhash = blockhash;
-  tx.feePayer = creator;
-  tx.partialSign(mintKp);
-  return {
-    mint: mintKp.publicKey.toBase58(),
-    config,
-    pool: derivePool(p.quoteMint, mintKp.publicKey.toBase58(), config),
-    txBase64: tx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString("base64"),
-    lastValidBlockHeight,
-  };
-}
+const LP = () => ({ address: ENV.launchpadAddress, abi: launchpadAbi });
+export const SUPPLY = parseEther(String(ENV.totalSupply));
+export const CURVE_SUPPLY = parseEther(String(ENV.curveSupply));
 
 export type Live = {
   pool: string;
-  priceSol: number;
+  priceSol: number; // ETH per token (field name kept for the UI)
   supply: number;
   marketCapSol: number;
   quoteReserveSol: number;
@@ -160,104 +34,116 @@ export type Live = {
   curveComplete: boolean;
 };
 
-export async function poolLive(poolAddr: string, quoteDecimals: number): Promise<Live | null> {
-  const pool = poolState(await dbc.state.getPool(poolAddr));
-  if (!pool) return null;
-  const cfg = await dbc.state.getPoolConfig(pool.config);
-  const price = Number(getPriceFromSqrtPrice(pool.sqrtPrice, TokenDecimal.SIX, quoteDecimals).toString());
-  const quoteReserve = Number(pool.quoteReserve.toString()) / 10 ** quoteDecimals;
-  const threshold = cfg ? Number(cfg.migrationQuoteThreshold.toString()) / 10 ** quoteDecimals : 0;
-  const migrated = pool.isMigrated !== 0;
+const f = (v: bigint) => Number(formatEther(v));
+
+/** Predict the CREATE2 address `launch()` will deploy to, so the token row exists before the user's transaction lands. */
+export function predictTokenAddress(p: { name: string; symbol: string; uri: string; creator: Address; salt: Hex }) {
+  const ctor = encodeAbiParameters(
+    [{ type: "string" }, { type: "string" }, { type: "string" }, { type: "address" }, { type: "uint256" }],
+    [p.name, p.symbol, p.uri, p.creator, SUPPLY],
+  );
+  return getContractAddress({ opcode: "CREATE2", from: ENV.launchpadAddress, salt: p.salt, bytecode: concatHex([tokenBytecode, ctor]) });
+}
+
+export function newSalt(creator: Address) {
+  return keccak256(stringToHex(`${creator}:${Date.now()}:${Math.random()}`));
+}
+
+export async function poolLive(token: Address): Promise<Live | null> {
+  const [pool, price] = await Promise.all([
+    publicClient.readContract({ ...LP(), functionName: "pools", args: [token] }) as Promise<readonly [Address, number, boolean, boolean, bigint, bigint, { virtualEth: bigint; virtualTokens: bigint; feeBps: number }]>,
+    publicClient.readContract({ ...LP(), functionName: "price", args: [token] }) as Promise<bigint>,
+  ]);
+  if (pool[0] === "0x0000000000000000000000000000000000000000") return null;
+  const [, , graduated, migrated, ethReserve, tokensSold, params] = pool;
+  // ETH that will have been raised when the curve completes: vE*vT/(vT-curve) - vE
+  const vE = params.virtualEth, vT = params.virtualTokens;
+  const threshold = (vE * vT) / (vT - CURVE_SUPPLY) - vE;
+  const priceEth = f(price);
   return {
-    pool: poolAddr,
-    priceSol: price,
+    pool: ENV.launchpadAddress,
+    priceSol: priceEth,
     supply: ENV.totalSupply,
-    marketCapSol: price * ENV.totalSupply,
-    quoteReserveSol: quoteReserve,
-    thresholdSol: threshold,
-    progress: migrated ? 1 : threshold > 0 ? Math.min(1, quoteReserve / threshold) : 0,
+    marketCapSol: priceEth * ENV.totalSupply,
+    quoteReserveSol: f(ethReserve),
+    thresholdSol: f(threshold),
+    progress: graduated ? 1 : Math.min(1, Number(tokensSold) / Number(CURVE_SUPPLY)),
     migrated,
-    curveComplete: migrated || (threshold > 0 && quoteReserve >= threshold),
+    curveComplete: graduated,
   };
 }
 
-export async function swapQuote(poolAddr: string, amountIn: BN, swapBaseForQuote: boolean, slippageBps: number) {
-  const raw = await dbc.state.getPool(poolAddr);
-  const pool = poolState(raw);
-  if (!raw || !pool) throw new Error("pool not found");
-  const cfg = await dbc.state.getPoolConfig(pool.config);
-  if (!cfg) throw new Error("config not found");
-  const currentPoint = await getCurrentPoint(connection, cfg.activationType);
-  const quote = dbc.pool.swapQuote({ virtualPool: raw, config: cfg, swapBaseForQuote, amountIn, slippageBps, hasReferral: false, eligibleForFirstSwapWithMinFee: false, currentPoint }) as unknown as {
-    outputAmount: BN; minimumAmountOut: BN; tradingFee: BN; actualInputAmount: BN;
-  };
-  return { amountOut: quote.outputAmount, minimumAmountOut: quote.minimumAmountOut, tradingFee: quote.tradingFee, migrated: pool.isMigrated !== 0 };
+export async function quoteBuy(token: Address, ethIn: bigint) {
+  const [tokensOut, ethUsed, fee] = (await publicClient.readContract({ ...LP(), functionName: "quoteBuy", args: [token, ethIn] })) as readonly [bigint, bigint, bigint];
+  return { tokensOut, ethUsed, fee };
 }
 
-export async function buildSwapTx(p: { pool: string; owner: string; amountIn: BN; minimumAmountOut: BN; swapBaseForQuote: boolean }) {
-  const owner = new PublicKey(p.owner);
-  const tx = await dbc.pool.swap({ owner, pool: new PublicKey(p.pool), amountIn: p.amountIn, minimumAmountOut: p.minimumAmountOut, swapBaseForQuote: p.swapBaseForQuote, referralTokenAccount: null, payer: owner });
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-  tx.recentBlockhash = blockhash;
-  tx.feePayer = owner;
-  return { txBase64: tx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString("base64"), lastValidBlockHeight };
+export async function quoteSell(token: Address, tokensIn: bigint) {
+  const [ethOut, fee] = (await publicClient.readContract({ ...LP(), functionName: "quoteSell", args: [token, tokensIn] })) as readonly [bigint, bigint];
+  return { ethOut, fee };
 }
 
-export async function tokenBalance(owner: string, mint: string) {
+export async function tokenBalance(owner: Address, token: Address) {
   try {
-    const ata = getAssociatedTokenAddressSync(new PublicKey(mint), new PublicKey(owner), false, TOKEN_PROGRAM_ID);
-    const acc = await getAccount(connection, ata, "confirmed");
-    return Number(acc.amount) / 10 ** BASE_DECIMALS;
+    return f((await publicClient.readContract({ address: token, abi: tokenAbi, functionName: "balanceOf", args: [owner] })) as bigint);
   } catch {
     return 0;
   }
 }
 
-export async function solBalance(owner: string) {
-  return (await connection.getBalance(new PublicKey(owner), "confirmed")) / LAMPORTS_PER_SOL;
+export async function ethBalance(owner: Address) {
+  return f(await publicClient.getBalance({ address: owner }));
 }
 
-/** Confirmed-transaction lookup used to validate client-reported signatures. */
-export async function txStatus(signature: string) {
-  const r = await connection.getSignatureStatuses([signature], { searchTransactionHistory: true });
-  const s = r.value[0];
-  if (!s) return "unknown" as const;
-  if (s.err) return "failed" as const;
-  return s.confirmationStatus === "confirmed" || s.confirmationStatus === "finalized" ? ("confirmed" as const) : ("pending" as const);
-}
-
-let _umi: ReturnType<typeof createUmi> | null = null;
-function umi() {
-  if (!_umi) {
-    const u = createUmi(ENV.rpcUrl).use(mplTokenMetadata());
-    const kp = u.eddsa.createKeypairFromSecretKey(launchpad().secretKey);
-    u.use(keypairIdentity(kp));
-    _umi = u;
+export async function txReceipt(hash: Hex) {
+  try {
+    return await publicClient.getTransactionReceipt({ hash });
+  } catch {
+    return null;
   }
-  return _umi;
 }
 
-/** The STS-1 shift: one UpdateMetadataAccountV2 (name, symbol, uri) + memo, signed by the launchpad's update authority. */
-export async function rewriteMetadata(mint: string, data: { name: string; symbol: string; uri: string }, memo: string) {
-  const u = umi();
-  const current = await fetchMetadataFromSeeds(u, { mint: umiPk(mint) });
-  const memoIx = new TransactionInstruction({ keys: [], programId: MEMO_PROGRAM, data: Buffer.from(memo, "utf8") });
-  const builder = transactionBuilder()
-    .add(
-      updateV1(u, {
-        mint: umiPk(mint),
-        authority: u.identity,
-        data: some({ name: data.name, symbol: data.symbol, uri: data.uri, sellerFeeBasisPoints: current.sellerFeeBasisPoints, creators: current.creators }),
-        isMutable: none(),
-        newUpdateAuthority: none(),
-      }),
-    )
-    .add({ instruction: fromWeb3JsInstruction(memoIx), signers: [], bytesCreatedOnChain: 0 });
-  const res = await builder.sendAndConfirm(u, { confirm: { commitment: "confirmed" } });
-  return bs58.encode(res.signature);
+/** Decode our launchpad events from a receipt. */
+export function decodeLaunchpadLogs(logs: { data: Hex; topics: Hex[]; address: Address }[]) {
+  const out: { eventName: string; args: Record<string, unknown> }[] = [];
+  for (const l of logs) {
+    if (l.address.toLowerCase() !== ENV.launchpadAddress.toLowerCase()) continue;
+    try {
+      const d = decodeEventLog({ abi: launchpadAbi, data: l.data, topics: l.topics as [Hex, ...Hex[]] });
+      out.push({ eventName: String(d.eventName), args: (d.args ?? {}) as unknown as Record<string, unknown> });
+    } catch {
+      /* not ours */
+    }
+  }
+  return out;
 }
 
-export async function readMetadata(mint: string) {
-  const m = await fetchMetadataFromSeeds(umi(), { mint: umiPk(mint) });
-  return { name: m.name, symbol: m.symbol, uri: m.uri, updateAuthority: m.updateAuthority.toString(), isMutable: m.isMutable };
+/** The STS-1 shift: ShiftLaunchpad.shift(token, name, symbol, uri, by), signed by the launchpad's authority key. */
+export async function rewriteMetadata(token: Address, data: { name: string; symbol: string; uri: string }, by: string) {
+  const w = walletClient();
+  const hash = await w.writeContract({ ...LP(), functionName: "shift", args: [token, data.name, data.symbol, data.uri, stringToHex(by, { size: 32 })], chain: CHAIN, account: launchpadAccount() });
+  const r = await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+  if (r.status !== "success") throw new Error("shift transaction reverted");
+  return hash;
 }
+
+/** After graduation: pull the ETH + unsold tokens out of the curve (then seed the DEX pool, see graduate.ts). */
+export async function migratePool(token: Address) {
+  const w = walletClient();
+  const hash = await w.writeContract({ ...LP(), functionName: "migrate", args: [token], chain: CHAIN, account: launchpadAccount() });
+  const r = await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+  if (r.status !== "success") throw new Error("migrate reverted");
+  return hash;
+}
+
+export async function readIdentity(token: Address) {
+  const [name, symbol, uri, generation] = await Promise.all([
+    publicClient.readContract({ address: token, abi: tokenAbi, functionName: "name" }) as Promise<string>,
+    publicClient.readContract({ address: token, abi: tokenAbi, functionName: "symbol" }) as Promise<string>,
+    publicClient.readContract({ address: token, abi: tokenAbi, functionName: "tokenURI" }) as Promise<string>,
+    publicClient.readContract({ address: token, abi: tokenAbi, functionName: "generation" }) as Promise<bigint>,
+  ]);
+  return { name, symbol, uri, generation: Number(generation) };
+}
+
+export const verifySignedMessage = (message: string, signature: Hex, address: Address) => verifyMessage({ address, message, signature }).catch(() => false);

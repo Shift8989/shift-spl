@@ -1,7 +1,7 @@
 import type { Specimen } from "./types";
 
-/** SOL/USD used for display only; refreshed from the config endpoint when available. */
-export let SOL_USD = 180;
+/** ETH/USD for display only; refreshed from /api/config. (Name kept from the first iteration of the UI.) */
+export let SOL_USD = 3500;
 export function setSolUsd(v: number) {
   if (v > 0) SOL_USD = v;
 }
@@ -18,10 +18,10 @@ export function fmtUsd(v: number) {
 }
 
 export function fmtSol(v: number) {
-  if (v === 0) return "0 SOL";
-  if (v < 0.001) return `${v.toExponential(2)} SOL`;
-  if (v < 1) return `${v.toFixed(4)} SOL`;
-  return `${v.toFixed(2)} SOL`;
+  if (v === 0) return "0 ETH";
+  if (v < 0.001) return `${v.toExponential(2)} ETH`;
+  if (v < 1) return `${v.toFixed(4)} ETH`;
+  return `${v.toFixed(2)} ETH`;
 }
 
 export function mcapUsd(s: Specimen) {
@@ -29,9 +29,9 @@ export function mcapUsd(s: Specimen) {
 }
 
 export function fmtPriceSol(p: number) {
-  if (p === 0) return "0 SOL";
-  if (p < 1e-4) return `${p.toExponential(2)} SOL`;
-  return `${p.toFixed(6)} SOL`;
+  if (p === 0) return "0 ETH";
+  if (p < 1e-4) return `${p.toExponential(2)} ETH`;
+  return `${p.toFixed(6)} ETH`;
 }
 
 export function fmtPriceUsd(p: number) {
@@ -84,5 +84,5 @@ export function mintShort(mint: string) {
   return `${mint.slice(0, 4)}…${mint.slice(-4)}`;
 }
 
-export const explorer = (cluster: string) => (kind: "tx" | "account", id: string) =>
-  `https://solscan.io/${kind}/${id}${cluster === "devnet" ? "?cluster=devnet" : ""}`;
+import { EXPLORER } from "./chain-config";
+export const explorer = () => (kind: "tx" | "account", id: string) => `${EXPLORER}/${kind === "tx" ? "tx" : "address"}/${id}`;

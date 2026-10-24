@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { HomeIcon, TokensIcon, ShiftsIcon, LaunchIcon, DocsIcon, XIcon, CollapseIcon, ExpandIcon, MenuIcon, SearchIcon } from "./Icons";
 import { ConnectButton } from "./ConnectButton";
 import { SearchModal } from "./SearchModal";
-import { useCluster } from "./ClusterContext";
+import { CHAIN, CHAIN_KEY } from "@/lib/chain-config";
 
 const NAV = [
   { href: "/", label: "Home", Icon: HomeIcon },
@@ -19,7 +19,6 @@ const NAV = [
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const cluster = useCluster();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -126,7 +125,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {cluster === "devnet" && <span className="chip hidden md:inline-flex">devnet</span>}
+            <span className="chip hidden md:inline-flex">{CHAIN_KEY === "robinhood" ? "robinhood chain" : CHAIN.name.toLowerCase()}</span>
             <Link className="btn btn-sm btn-ink hidden sm:inline-flex" href="/lab">
               Launch
             </Link>

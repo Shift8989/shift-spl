@@ -88,12 +88,14 @@ export type PairConfig = {
 
 export type Config = {
   configured: boolean;
-  cluster: "devnet" | "mainnet-beta";
+  chain: { key: string; id: number; name: string; explorer: string; rpc: string };
+  launchpad: string;
   updateAuthority: string | null;
+  ethUsd: number;
   keeperIntervalMin: number;
   voteRoundMin: number;
-  initialMarketCap: number;
-  migrationMarketCap: number;
   tradingFeeBps: number;
+  curveSupply: number;
+  totalSupply: number;
   pairs: PairConfig[];
 };

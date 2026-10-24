@@ -15,13 +15,13 @@ export default function Docs() {
         <div className="relative">
           <div className="flex flex-wrap items-center gap-2">
             <span className="chip">STS-1</span>
-            <span className="chip">status · live on mainnet</span>
+            <span className="chip">status · live on robinhood chain</span>
             <span className="chip">revision 2026-10-24</span>
           </div>
           <h1 className="mt-5 text-[34px] leading-[1.05] font-semibold tracking-[-0.045em] sm:text-[46px]">The Shiftable Token Standard</h1>
           <p className="mt-4 max-w-2xl text-[15.5px] leading-relaxed text-ink-soft">
-            STS-1 defines SPL tokens whose on-chain identity is not fixed at birth. A shiftable token keeps one mint, one supply and every holder&apos;s
-            balance for life, while its name, ticker and image can be rewritten: by its creator, on a schedule set at launch, or by following the market.
+            STS-1 defines ERC-20 tokens on Robinhood Chain whose on-chain identity is not fixed at birth. A shiftable token keeps one address, one supply and every
+            holder&apos;s balance for life, while its name, ticker and image can be rewritten: by its creator, on a schedule, by its holders, or by following the market.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             <Link className="btn btn-ink" href="/lab">
