@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { HeroDiagram } from "@/components/HeroDiagram";
 import { TokenGrid } from "@/components/TokenGrid";
-import { SPECIMENS, TRENDING } from "@/lib/data";
 
 export default function Home() {
   return (
     <>
       <section className="shell pt-10">
-        <HeroDiagram trending={TRENDING.slice(0, 8)} />
+        <HeroDiagram />
         <div className="mt-6 text-center">
           <h1 className="display text-[44px] sm:text-[72px]">Tokens that rewrite themselves.</h1>
           <p className="mx-auto mt-5 max-w-2xl text-[16px] leading-relaxed text-ink-soft">
@@ -25,7 +24,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <TokenGrid items={SPECIMENS} title="Launches" />
+      <TokenGrid title="Launches" />
     </>
   );
 }

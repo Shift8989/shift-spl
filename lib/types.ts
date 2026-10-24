@@ -54,6 +54,19 @@ export type Shift = {
   tx: string;
 };
 
+export type Trade = { signature: string; side: "buy" | "sell"; quote_amount: number; base_amount: number; price: number; trader: string; at: string };
+
+export type Proposal = { id: number; name: string; symbol: string; image: string; proposer: string; created_at: string; votes: number };
+
+export type ScheduleItem = { idx: number; name: string; symbol: string; image: string; at: string; done: boolean };
+
+export type SpecimenDetail = Specimen & {
+  shifts: Shift[];
+  trades: Trade[];
+  vote: { round: number; closesAt: number; proposals: Proposal[]; voters: string[] } | null;
+  schedule: ScheduleItem[];
+};
+
 export type Trending = {
   mint: string;
   name: string;
@@ -70,21 +83,17 @@ export type PairConfig = {
   decimals: number;
   image: string | null;
   kind: "sol" | "stock";
-  config: string;
+  config: string | null;
 };
 
 export type Config = {
   configured: boolean;
-  config: string;
-  quoteMint: string;
-  quoteDecimals: number;
-  baseDecimals: number;
-  thresholdSol: number;
-  creatorTradingFeePercentage: number;
-  mutable: boolean;
-  solQuoted: boolean;
-  solUsd: number;
+  cluster: "devnet" | "mainnet-beta";
+  updateAuthority: string | null;
   keeperIntervalMin: number;
   voteRoundMin: number;
+  initialMarketCap: number;
+  migrationMarketCap: number;
+  tradingFeeBps: number;
   pairs: PairConfig[];
 };

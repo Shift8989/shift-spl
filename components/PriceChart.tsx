@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createChart, CandlestickSeries, ColorType, type IChartApi, type UTCTimestamp } from "lightweight-charts";
-
-export type Candle = { time: UTCTimestamp; open: number; high: number; low: number; close: number };
+import { createChart, CandlestickSeries, ColorType, type IChartApi } from "lightweight-charts";
+import type { Candle } from "@/lib/candles";
 
 export function PriceChart({ candles }: { candles: Candle[] }) {
   const ref = useRef<HTMLDivElement>(null);

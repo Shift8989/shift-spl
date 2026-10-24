@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Specimen } from "@/lib/types";
 import { mcapUsd, nextBoundary } from "@/lib/format";
 import { TokenCard } from "./TokenCard";
+import { usePoll } from "@/lib/api";
 
 const MODES = [
   { key: "all", label: "All" },
@@ -63,7 +64,9 @@ export function useNow(step = 1000) {
   return now;
 }
 
-export function TokenGrid({ items, title }: { items: Specimen[]; title: string }) {
+export function TokenGrid({ title }: { title: string }) {
+  const { data, error } = usePoll<Specimen[]>("/api/specimens?limit=200", 20_000);
+  const items = useMemo(() => data ?? [], [data]);
   const [mode, setMode] = useState<ModeKey>("all");
   const [sort, setSort] = useState<SortKey>("soon");
   const now = useNow();
@@ -101,7 +104,11 @@ export function TokenGrid({ items, title }: { items: Specimen[]; title: string }
           </div>
         </div>
         <div className="mt-6">
-          {list.length === 0 ? (
+          {error ? (
+            <div className="term mono px-3 py-10 text-center text-[12px] text-red">{error}</div>
+          ) : !data ? (
+            <div className="term mono px-3 py-10 text-center text-[12px] text-ink-faint">loading…</div>
+          ) : list.length === 0 ? (
             <div className="term mono px-3 py-10 text-center text-[12px] text-ink-faint">no tokens in this view yet</div>
           ) : (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">

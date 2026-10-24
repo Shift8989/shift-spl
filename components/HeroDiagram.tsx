@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Trending } from "@/lib/types";
 import { mintShort } from "@/lib/format";
+import { usePoll } from "@/lib/api";
 
 const W = 1000;
 const H = 290;
@@ -27,7 +28,9 @@ const DOTS: [number, number][] = [
 
 const STEPS = ["authority", "metadata", "wallets", "holders"] as const;
 
-export function HeroDiagram({ trending }: { trending: Trending[] }) {
+export function HeroDiagram() {
+  const { data } = usePoll<Trending[]>("/api/trending", 300_000);
+  const trending = data ?? [];
   const wrap = useRef<HTMLDivElement>(null);
   const pathRefs = useRef<(SVGPathElement | null)[]>([]);
   const [scale, setScale] = useState(1);
