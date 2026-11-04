@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HeroDiagram } from "@/components/HeroDiagram";
 import { TokenGrid } from "@/components/TokenGrid";
+import { CaChip } from "@/components/CaChip";
 
 export default function Home() {
   return (
@@ -21,6 +22,10 @@ export default function Home() {
             <Link className="btn btn-lg" href="/explore">
               See live tokens
             </Link>
+          </div>
+          <div className="mt-5 flex justify-center">
+            <CaChip full className="hidden sm:inline-flex" />
+            <CaChip className="sm:hidden" />
           </div>
         </div>
       </section>

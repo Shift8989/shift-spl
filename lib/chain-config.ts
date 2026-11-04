@@ -43,4 +43,7 @@ export const V4 = {
   permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3" as Address,
 };
 
+/** The project token, deployed on Robinhood Chain (not a launchpad token). */
+export const SHIFT_TOKEN = { address: "0x5abcc2038ceace9e4db05973fea4258b0d4e2d6e" as Address, symbol: "SHIFT", name: "Shift SPL" };
+
 export const explorerUrl = (kind: "tx" | "address" | "token", id: string) => `${EXPLORER}/${kind}/${id}`;

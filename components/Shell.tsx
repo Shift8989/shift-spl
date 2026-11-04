@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { HomeIcon, TokensIcon, ShiftsIcon, LaunchIcon, DocsIcon, XIcon, CollapseIcon, ExpandIcon, MenuIcon, SearchIcon } from "./Icons";
+import { CaChip } from "./CaChip";
 import { ConnectButton } from "./ConnectButton";
 import { SearchModal } from "./SearchModal";
 import { CHAIN, CHAIN_KEY } from "@/lib/chain-config";
@@ -88,6 +89,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="mt-auto px-4 pb-4">
+          {!collapsed && <CaChip size="sm" label="$SHIFT" className="mb-2 w-full" />}
           <a
             href="https://x.com/shiftspl"
             target="_blank"
@@ -125,6 +127,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <CaChip size="sm" className="hidden xl:inline-flex" />
             <span className="chip hidden md:inline-flex">{CHAIN_KEY === "robinhood" ? "robinhood chain" : CHAIN.name.toLowerCase()}</span>
             <Link className="btn btn-sm btn-ink hidden sm:inline-flex" href="/lab">
               Launch
