@@ -40,7 +40,7 @@ function Loaded({ s, refresh }: { s: SpecimenDetail; refresh: () => void }) {
   const ago = (iso: string) => (now ? timeAgo(iso, now) : "…");
 
   const priceUsd = s.live.priceSol * SOL_USD;
-  const candles = useMemo(() => candlesFromTrades(s.trades, TF.find((t) => t.key === tf)!.sec, s.live.priceSol * SOL_USD), [s.trades, s.live.priceSol, tf]);
+  const candles = useMemo(() => candlesFromTrades(s.trades.map((t) => ({ ...t, price: t.price * SOL_USD })), TF.find((t) => t.key === tf)!.sec, s.live.priceSol * SOL_USD), [s.trades, s.live.priceSol, tf]);
   const first = candles[0]?.open ?? priceUsd;
   const change = first > 0 ? ((priceUsd - first) / first) * 100 : 0;
   const isCreator = isConnected && address?.toLowerCase() === s.creator.toLowerCase();

@@ -5,7 +5,7 @@ export type Candle = { time: UTCTimestamp; open: number; high: number; low: numb
 
 /** OHLC candles from recorded trades. `last` seeds the latest bucket when there are no trades yet. */
 export function candlesFromTrades(trades: Trade[], stepSec: number, last: number, count = 60): Candle[] {
-  const now = Math.floor(Date.now() / stepSec) * stepSec;
+  const now = Math.floor(Date.now() / 1000 / stepSec) * stepSec;
   const buckets = new Map<number, number[]>();
   for (const t of trades) {
     const b = Math.floor(new Date(t.at).getTime() / 1000 / stepSec) * stepSec;
