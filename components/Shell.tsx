@@ -118,7 +118,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => setSearchOpen(true)}
                 className="flex h-9 w-full cursor-text items-center gap-2.5 rounded-lg border border-line bg-card px-3 text-left transition-colors hover:border-line-strong"
-                aria-label="Search tokens by name, ticker or mint"
+                aria-label="Search tokens by name, ticker or address"
               >
                 <SearchIcon className="shrink-0 text-ink-faint" />
                 <span className="min-w-0 flex-1 text-[13px] text-ink-faint">Search tokens</span>

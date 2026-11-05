@@ -131,10 +131,10 @@ export function DocsArticle() {
       <Pre>{`{
   "name": "Shapeshifter",
   "symbol": "SHIFT",
-  "image": "https://shift-spl.com/api/img/…",
+  "image": "https://shift-spl.xyz/api/img/…",
   "description": "What it is, and what it might become.",
   "token": "0x…",
-  "createdOn": "https://shift-spl.com",
+  "createdOn": "https://shift-spl.xyz",
   "twitter": "https://x.com/…",
   "website": "https://…",
   "attributes": [

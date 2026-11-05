@@ -11,8 +11,8 @@ export default function Home() {
         <div className="mt-6 text-center">
           <h1 className="display text-[44px] sm:text-[72px]">Tokens that rewrite themselves.</h1>
           <p className="mx-auto mt-5 max-w-2xl text-[16px] leading-relaxed text-ink-soft">
-            Launch an SPL token whose name, ticker and image can change. Shift it yourself whenever you like, set a schedule up front, or let it
-            mirror whatever is trending. The launchpad&apos;s update authority does the rewrite on-chain. Same mint, same balances, new identity in
+            Launch an STS-1 token on Robinhood Chain whose name, ticker and image can change. Shift it yourself whenever you like, set a schedule up front, or let it
+            mirror whatever is trending. The launchpad&apos;s update authority does the rewrite on-chain. Same address, same balances, new identity in
             every wallet.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-2.5">

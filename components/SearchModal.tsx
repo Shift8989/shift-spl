@@ -63,7 +63,7 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
               setIdx(0);
             }}
             className="h-full min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-faint"
-            placeholder="Search by name, ticker or mint"
+            placeholder="Search by name, ticker or address"
           />
           <kbd className="mono rounded-md border border-line-strong bg-card-2 px-1.5 py-0.5 text-[10.5px] text-ink-soft">esc</kbd>
         </div>

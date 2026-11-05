@@ -101,7 +101,7 @@ export function HeroDiagram() {
       className="relative w-full"
       style={{ height: H * scale }}
       role="img"
-      aria-label="Diagram: the creator, a schedule or the keeper asks for a shift; the launchpad's update authority signs; the token's metadata account is rewritten; every wallet shows the new name and image while the mint and balances stay the same."
+      aria-label="Diagram: the creator, a schedule or the keeper asks for a shift; the launchpad's update authority signs; the token's name, symbol and URI are rewritten on-chain; every wallet shows the new name and image while the address and balances stay the same."
     >
       <div className="absolute top-0 left-1/2 origin-top" style={{ width: W, height: H, transform: `translateX(-50%) scale(${scale})` }}>
         <svg className="absolute inset-0" width={W} height={H} viewBox={`0 0 ${W} ${H}`} fill="none">
@@ -153,7 +153,7 @@ export function HeroDiagram() {
         <Box style={boxStyle("authority", 540, 20)} tag="authority" title="signs" sub="launchpad holds update authority" k={cycle} />
         <Box style={boxStyle("metadata", 790, 20)} tag="metadata" title={`v${gen}`} sub={`name · symbol · uri → $${symbol}`} k={cycle} />
         <Box style={boxStyle("wallets", 790, 170)} tag="wallets" title={name} sub="new identity everywhere it's shown" k={cycle} image={image} />
-        <Box style={boxStyle("holders", 540, 170)} tag="holders" title="same mint" sub="balances never move" k={cycle} />
+        <Box style={boxStyle("holders", 540, 170)} tag="holders" title="same address" sub="balances never move" k={cycle} />
 
         <div className="mono absolute text-[10.5px] text-ink-faint" style={{ left: 540, top: 266 }}>
           ShiftToken.shift() · one transaction · {source.key} triggered
