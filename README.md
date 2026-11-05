@@ -1,4 +1,8 @@
+<p align="center"><img src="brand/x/launch-16x9.png" alt="shift · tokens that rewrite themselves" width="100%" /></p>
+
 # shift · shiftable tokens on Robinhood Chain
+
+**Live:** [shift-spl.xyz](https://shift-spl.xyz) · **Spec:** [STS-1](https://shift-spl.xyz/docs) · **X:** [@shiftspl](https://x.com/shiftspl) · **$SHIFT:** [`0x5abcc2038ceace9e4db05973fea4258b0d4e2d6e`](https://robinhoodchain.blockscout.com/token/0x5abcc2038ceace9e4db05973fea4258b0d4e2d6e) · **License:** MIT
 
 Launchpad for **STS-1** (Shiftable Token Standard) tokens: ERC-20s whose on-chain name, ticker and image can be rewritten after launch, by the creator, on a schedule, by holder vote, or by following what is trending. Same address, same balances, new identity in every wallet.
 
@@ -47,3 +51,12 @@ Local end-to-end: start a hardhat node (`npx hardhat node`, chain id 4663), fund
 - `app/api/` launch, trade, shift, vote, keeper, specimens, shifts, trending, config, meta, img, balance
 - `contracts/` Solidity + compiled artifacts · `scripts/` compile, deploy, e2e, contract test
 - `lib/server/` chain (viem), db, tokens/shifts, keeper, graduate, trending, images · `lib/` chain config, ABIs, client helpers
+
+## Contributing
+
+Issues and pull requests are welcome. Contracts live in `contracts/` (Solidity 0.8, compiled with solc-js via `node scripts/compile.mjs`); run the contract tests with `node scripts/contract-test.mjs` and the end-to-end flow with `node scripts/e2e.mjs` against a local Hardhat node. Never commit `.env.local`, `.data/` or any key: the deployer key pays gas for every shift on mainnet.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Fonts in `assets/fonts` are under the SIL Open Font License (see the license files next to them).
+
